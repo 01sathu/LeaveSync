@@ -62,11 +62,30 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Leave Management System API is healthy',
+// Health check endpoint (verifies API process and database connectivity)
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'disconnected';
+  let dbError = null;
+
+  try {
+    await connectDB();
+    dbStatus = 'connected';
+  } catch (err) {
+    dbStatus = 'error';
+    // Sanitize error string to guarantee no passwords or credentials can leak
+    const rawMsg = err?.message || 'Database connection failure';
+    dbError = rawMsg.replace(/mongodb(\+srv)?:\/\/[^@]+@/gi, 'mongodb$1://***:***@');
+  }
+
+  const isHealthy = dbStatus === 'connected';
+
+  res.status(isHealthy ? 200 : 503).json({
+    success: isHealthy,
+    message: isHealthy
+      ? 'Leave Management System API is healthy'
+      : 'Leave Management System API is running, but database connection failed',
+    database: dbStatus,
+    ...(dbError && { error: dbError }),
     timestamp: new Date().toISOString(),
   });
 });

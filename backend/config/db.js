@@ -14,15 +14,18 @@ const connectDB = async () => {
       : process.env.MONGO_URI;
 
   if (!uri) {
-    console.error('CRITICAL CONFIG ERROR: "MONGO_URI" environment variable is not defined.');
-    console.error('Please configure MONGO_URI in your Vercel dashboard or local .env file.');
-    return;
+    const errorMsg = 'CRITICAL CONFIG ERROR: "MONGO_URI" environment variable is not defined in your environment settings.';
+    console.error(errorMsg);
+    throw new Error(errorMsg);
   }
 
   try {
-    const conn = await mongoose.connect(uri);
+    const conn = await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000,
+    });
     isConnected = true;
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
     throw error;

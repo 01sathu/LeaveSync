@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, Lock, Mail, AlertCircle, ArrowRight, Eye, EyeOff, ShieldCheck, UserCheck } from 'lucide-react';
+import { Calendar, Lock, Mail, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -40,12 +40,6 @@ const Login = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleQuickFill = (demoEmail, demoPassword) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setError('');
   };
 
   return (
@@ -143,52 +137,6 @@ const Login = () => {
               </button>
             </div>
           </form>
-
-          {/* Quick Demo Fill Buttons */}
-          <div className="mt-6 pt-5 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center mb-3">
-              One-Click Demo Accounts
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin@example.com', 'Admin@123')}
-                className="text-left p-2.5 rounded-xl border border-purple-200/80 bg-purple-50/50 hover:bg-purple-100/60 hover:border-purple-300 active:scale-[0.98] transition group"
-              >
-                <div className="flex items-center gap-1.5 text-xs font-bold text-purple-900">
-                  <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                  Admin
-                </div>
-                <div className="text-[10px] text-purple-700 truncate mt-0.5">admin@example.com</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('asha.rao@example.com', 'Employee@123')}
-                className="text-left p-2.5 rounded-xl border border-indigo-200/80 bg-indigo-50/50 hover:bg-indigo-100/60 hover:border-indigo-300 active:scale-[0.98] transition group"
-              >
-                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900">
-                  <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
-                  Employee 1
-                </div>
-                <div className="text-[10px] text-indigo-700 truncate mt-0.5">asha.rao@example.com</div>
-              </button>
-            </div>
-
-            <div className="mt-2">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('rahul.verma@example.com', 'Employee@123')}
-                className="w-full text-left px-3 py-2 rounded-xl border border-emerald-200/80 bg-emerald-50/50 hover:bg-emerald-100/60 hover:border-emerald-300 active:scale-[0.98] transition flex items-center justify-between"
-              >
-                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  Employee 2 (Rahul Verma)
-                </div>
-                <span className="text-[10px] text-emerald-700 font-mono">rahul.verma@example.com</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

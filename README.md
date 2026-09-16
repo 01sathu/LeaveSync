@@ -148,8 +148,22 @@ npm run dev
 1. Start MongoDB (Atlas is always "running"; if using local MongoDB, start the `mongod` service).
 2. Start the backend: `cd backend && npm run dev` (runs on `http://localhost:5000` by default).
 3. Start the frontend: `cd frontend && npm run dev` (runs on `http://localhost:5173` by default).
-4. (Optional) Seed sample accounts: `node backend/scripts/seed.js` — creates one admin and a few employee accounts with sample balances.
+4. (Optional) Seed sample accounts: `node backend/scripts/seed.js` — creates one admin and employee accounts with initial leave quotas.
 5. Open `http://localhost:5173` and log in.
+
+## Default Test Credentials
+
+The database can be seeded with pre-configured accounts for testing both Admin and Employee roles:
+
+```bash
+node backend/scripts/seed.js
+```
+
+| Role | Name | Email | Password | Pre-configured Quota / Status |
+|---|---|---|---|---|
+| **Admin** | System Admin | `admin@example.com` | `Admin@123` | Organization-wide dashboard, review & approve/reject leave requests |
+| **Employee 1** | Asha Rao | `asha.rao@example.com` | `Employee@123` | 12 Casual, 10 Sick, 12 Earned (3 used / 1 approved, 1 pending) |
+| **Employee 2** | Rahul Verma | `rahul.verma@example.com` | `Employee@123` | 12 Casual, 10 Sick, 15 Earned (1 pending Sick leave request) |
 
 ## API Overview
 
@@ -211,10 +225,10 @@ Already covered above. Use the same `MONGO_URI` for whichever environment (local
 - Backend: `<LIVE_BACKEND_URL>`
 
 ## GitHub Repository
-
-`<GITHUB_REPOSITORY_URL>`
-
-## Common Issues
+ 
+- [https://github.com/01sathu/LeaveSync.git](https://github.com/01sathu/LeaveSync.git)
+ 
+ ## Common Issues
 
 | Issue | Likely Cause | Fix |
 |---|---|---|

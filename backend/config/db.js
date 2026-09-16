@@ -1,4 +1,12 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Configure reliable public DNS resolvers to handle SRV record lookups in cloud/serverless environments
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (dnsErr) {
+  // Gracefully fallback to container default if sandbox restricts custom DNS
+}
 
 let isConnected = false;
 

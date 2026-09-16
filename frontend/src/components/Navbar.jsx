@@ -51,7 +51,7 @@ const Navbar = () => {
 
   return (
     <header className="glass-nav sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Brand Logo */}
           <div className="flex items-center">
@@ -63,9 +63,6 @@ const Navbar = () => {
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-base text-slate-900 tracking-tight">
                     Leave<span className="text-indigo-600">Sync</span>
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200/60">
-                    v1.0
                   </span>
                 </div>
               </div>

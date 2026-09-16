@@ -97,7 +97,7 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col items-center justify-center h-64 gap-3">
           <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-xs font-semibold text-slate-400">Loading admin console...</p>
@@ -107,7 +107,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
       <Toast
         message={toast.message}
         type={toast.type}

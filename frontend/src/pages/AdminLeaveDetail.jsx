@@ -85,7 +85,7 @@ const AdminLeaveDetail = () => {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col items-center justify-center h-64 gap-3">
           <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-xs font-semibold text-slate-400">Loading audit details...</p>
@@ -96,7 +96,7 @@ const AdminLeaveDetail = () => {
 
   if (!leave) {
     return (
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-4">
         <Link
           to="/admin/leaves"
           className="inline-flex items-center text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-900"
@@ -120,7 +120,7 @@ const AdminLeaveDetail = () => {
   const hasSufficientBalance = remainingDays >= (leave.totalDays || 0);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-fade-in">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-fade-in">
       <Toast
         message={toast.message}
         type={toast.type}

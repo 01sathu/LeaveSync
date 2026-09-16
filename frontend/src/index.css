@@ -3,7 +3,52 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-gray-50 text-gray-900 font-sans antialiased;
+  :root {
+    --color-bg: #f8fafc;
   }
+
+  body {
+    background-color: var(--color-bg);
+    color: #0f172a;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+/* Ambient Dot Pattern background inspired by bg.ibelick.com */
+.bg-grid-pattern {
+  background-image: radial-gradient(rgba(148, 163, 184, 0.25) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Glassmorphism card utilities */
+.glass-panel {
+  background-color: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.glass-nav {
+  background-color: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
 }

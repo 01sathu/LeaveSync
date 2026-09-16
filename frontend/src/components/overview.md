@@ -1,16 +1,16 @@
 # Frontend Components Module Overview
 
 ## 1. What is this module?
-The `frontend/src/components` folder contains reusable presentation and layout components used throughout the React user interface.
+The `frontend/src/components` folder contains reusable presentation and layout components used across the Leave Management System.
 
 ## 2. Why is it used?
-Breaking the user interface down into smaller, reusable UI components follows standard React best practices. Instead of duplicating navigation bars, metric cards, status indicators, or route protection logic on every screen, these elements are maintained in isolated, testable components.
+Breaking the user interface down into smaller, reusable UI components follows standard modern React engineering practices. Common elements—such as navigation bars, status indicators, metric cards, dialog modals, and feedback notifications—are maintained here in isolation so every page looks cohesive and clean.
 
 ## 3. Files in this module
 
 ### `Navbar.jsx`
-- **What it does:** Displays the top navigation bar with the application logo, role-aware navigation links (e.g., Dashboard, Apply Leave, Leave History for employees; Dashboard, Leave Requests, Employees for admins), current user badge, and logout action.
-- **Why it is needed:** Provides clear, persistent navigation throughout the application.
+- **What it does:** Displays the top navigation bar with a glassmorphism frosted background, application logo, role-aware navigation links (Dashboard, Apply Leave, Leave History for employees; Dashboard, Leave Requests, Employees for admins), user profile chip with initials avatar, and a mobile-friendly collapsible drawer.
+- **Why it is needed:** Provides clean, accessible navigation on both desktop and mobile screens.
 - **What it communicates with:** Consumes `useAuth()` to conditionally show employee vs admin links and execute logout.
 
 ### `ProtectedRoute.jsx`
@@ -19,30 +19,45 @@ Breaking the user interface down into smaller, reusable UI components follows st
 - **What it communicates with:** Reads `useAuth()` and wraps child routes inside `App.jsx`.
 
 ### `StatCard.jsx`
-- **What it does:** A clean summary card component that presents a key metric, including title, big number, description, colored icon, and subtle border.
-- **Why it is needed:** Used across both Employee and Admin dashboards to visualize counts (e.g., Casual balance, Sick balance, Pending requests, Approved requests).
+- **What it does:** A linear/SaaS-style summary card component that presents key metrics, titles, and icons. It also includes an optional quota progress bar showing the percentage of leave days used versus total allotted days.
+- **Why it is needed:** Used across both Employee and Admin dashboards to visualize leave quotas and review counts.
 - **What it communicates with:** Rendered by `EmployeeDashboard.jsx` and `AdminDashboard.jsx`.
 
 ### `StatusBadge.jsx`
-- **What it does:** Displays a color-coded status badge with matching icons:
-  - `Pending`: Amber badge with clock icon
-  - `Approved`: Emerald green badge with check icon
-  - `Rejected`: Rose red badge with cross icon
+- **What it does:** Displays a pill-shaped status badge with a live colored indicator dot:
+  - `Pending`: Translucent amber badge with a subtle pulsing dot
+  - `Approved`: Translucent emerald green badge with a solid dot
+  - `Rejected`: Translucent rose red badge with a solid dot
 - **Why it is needed:** Provides immediate visual clarity when reviewing leave requests in tables and detail views.
 - **What it communicates with:** Rendered by `LeaveHistory.jsx`, `AdminLeaves.jsx`, and `AdminLeaveDetail.jsx`.
 
+### `Toast.jsx`
+- **What it does:** A lightweight toast notification banner that slides up in the bottom-right corner when an action succeeds or fails, and automatically dismisses itself after 4 seconds.
+- **Why it is needed:** Gives users immediate, non-intrusive feedback when a leave request is submitted, approved, or rejected.
+- **What it communicates with:** Used by `ApplyLeave.jsx`, `AdminDashboard.jsx`, `AdminLeaves.jsx`, and `AdminLeaveDetail.jsx`.
+
+### `Modal.jsx`
+- **What it does:** An accessible popup dialog with backdrop blur, smooth entrance animation, and keyboard ESC dismissal.
+- **Why it is needed:** Used for administrative workflows like writing a rejection reason before confirming a rejection.
+- **What it communicates with:** Used by `AdminDashboard.jsx`, `AdminLeaves.jsx`, and `AdminLeaveDetail.jsx`.
+
 ## 4. How does the code work?
-- `ProtectedRoute` inspects `isAuthenticated` and `user.role` from `AuthContext`. If checks pass, it renders the requested page using React Router's `<Outlet />`.
-- `Navbar` dynamically computes link styling based on the active route using `NavLink`'s `isActive` property.
+- `ProtectedRoute` checks `isAuthenticated` and `user.role`. If checks pass, it renders the requested page using `<Outlet />`.
+- `Toast` uses `setTimeout` to automatically call `onClose` after a designated duration.
+- `Modal` attaches an ESC key listener to the browser window and locks background scrolling while open.
 
 ## 5. Important logic
-- **Role-Aware Route Protection:** If an employee attempts to navigate directly to `/admin/dashboard`, `ProtectedRoute` intercepts the request and safely reroutes them back to `/dashboard`.
-- **Status Color Consistency:** Status badge colors and icons are centralized in `StatusBadge.jsx` to guarantee that "Pending", "Approved", and "Rejected" look identical everywhere in the app.
+- **Role-Aware Redirection:** If an employee attempts to navigate directly to `/admin/dashboard`, `ProtectedRoute` intercepts the request and safely reroutes them back to `/dashboard`.
+- **Consistent Design Language:** Status colors, rounded borders, and subtle drop shadows are harmonized across all components for a unified SaaS feel.
 
 ## 6. Connection with other modules
 ```text
 App.jsx (Layout & Router)
   ├── ProtectedRoute.jsx (guards routes)
   ├── Navbar.jsx (header)
-  └── Pages (render StatCard.jsx, StatusBadge.jsx)
+  └── Pages
+        ├── StatCard.jsx
+        ├── StatusBadge.jsx
+        ├── Toast.jsx
+        └── Modal.jsx
 ```

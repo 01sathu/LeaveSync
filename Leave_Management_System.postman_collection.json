@@ -1,0 +1,553 @@
+{
+  "info": {
+    "name": "Leave Management System API",
+    "_postman_id": "d8291f53-274e-4b2a-9e11-85b410972bc2",
+    "description": "Complete Postman collection for testing the Leave Management System API, including authentication, employee endpoints, admin workflows, validation, and idempotency edge cases.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "employeeToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leaveId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "System Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login as Employee",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data.token) {",
+                  "    pm.collectionVariables.set('employeeToken', res.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"asha.rao@example.com\",\n  \"password\": \"Employee@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data.token) {",
+                  "    pm.collectionVariables.set('adminToken', res.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Invalid Credentials (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"asha.rao@example.com\",\n  \"password\": \"WrongPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee Endpoints",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employee/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["employee", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Leave Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employee/leave-balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["employee", "leave-balance"]
+            }
+          }
+        },
+        {
+          "name": "Apply for Leave (Valid 201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data._id) {",
+                  "    pm.collectionVariables.set('leaveId', res.data._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveType\": \"Casual\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-02\",\n  \"reason\": \"Personal family matter\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leaves",
+              "host": ["{{baseUrl}}"],
+              "path": ["leaves"]
+            }
+          }
+        },
+        {
+          "name": "Apply for Leave - Insufficient Balance (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveType\": \"Casual\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-08-30\",\n  \"reason\": \"Excessive leave test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leaves",
+              "host": ["{{baseUrl}}"],
+              "path": ["leaves"]
+            }
+          }
+        },
+        {
+          "name": "Apply for Leave - End Date Before Start Date (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveType\": \"Sick\",\n  \"startDate\": \"2026-07-10\",\n  \"endDate\": \"2026-07-05\",\n  \"reason\": \"Invalid date range test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leaves",
+              "host": ["{{baseUrl}}"],
+              "path": ["leaves"]
+            }
+          }
+        },
+        {
+          "name": "Get My Leaves (All)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["leaves", "my"]
+            }
+          }
+        },
+        {
+          "name": "Get My Leaves (Filter Pending)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/my?status=Pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["leaves", "my"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "Pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Leave Request by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/{{leaveId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["leaves", "{{leaveId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Endpoints",
+      "item": [
+        {
+          "name": "Get Admin Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get All Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/employees",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "employees"]
+            }
+          }
+        },
+        {
+          "name": "Get All Organization Leaves",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/leaves",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "leaves"]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Organization Leaves",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/leaves?status=Pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "leaves"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "Pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Admin Leave Detail by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/leaves/{{leaveId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "leaves", "{{leaveId}}"]
+            }
+          }
+        },
+        {
+          "name": "Approve Leave Request (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/leaves/{{leaveId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "leaves", "{{leaveId}}", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Approve Again - Idempotency Guard (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/leaves/{{leaveId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "leaves", "{{leaveId}}", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Leave Request (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectionReason\": \"Department requires on-site coverage during this window.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/leaves/{{leaveId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "leaves", "{{leaveId}}", "reject"]
+            }
+          }
+        },
+        {
+          "name": "Reject Again - Idempotency Guard (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/leaves/{{leaveId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "leaves", "{{leaveId}}", "reject"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Security and RBAC",
+      "item": [
+        {
+          "name": "Employee Accessing Admin Route (403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Unauthenticated Request (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employee/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["employee", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Invalid ObjectId Format (400)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/invalid-mongo-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["leaves", "invalid-mongo-id"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

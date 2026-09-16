@@ -219,10 +219,11 @@ Already covered above. Use the same `MONGO_URI` for whichever environment (local
 - The backend host redeploys automatically or via a manual trigger, depending on the host's configuration.
 - If environment variables change (e.g., a new `CLIENT_URL` after a frontend redeploy), update them in both hosting dashboards and redeploy the backend.
 
-## Live URLs
+## Live Application
 
-- Frontend: `<LIVE_FRONTEND_URL>`
-- Backend: `<LIVE_BACKEND_URL>`
+* **User-End (Frontend):** [https://leavesync-frontend.vercel.app](https://leavesync-frontend.vercel.app)
+* **Backend API:** [https://leavesync-backend.vercel.app](https://leavesync-backend.vercel.app)
+* **API Health Check:** [https://leavesync-backend.vercel.app/api/health](https://leavesync-backend.vercel.app/api/health)
 
 ## GitHub Repository
  

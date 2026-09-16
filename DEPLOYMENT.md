@@ -73,7 +73,8 @@ This guide provides step-by-step instructions to host both the **Frontend** and 
    | `VITE_API_URL` | `https://leavesync-backend.vercel.app/api` |
    *(Note: Use your actual Backend URL from Step 2 followed by `/api`)*
 6. Click **Deploy**.
-7. Vercel will build and deploy the frontend (e.g. `https://leavesync-frontend.vercel.app`).
+7. Vercel will build and deploy the frontend (e.g. `https://leave-sync-frontend.vercel.app`).
+8. Open your live application at `https://leave-sync-frontend.vercel.app`.
    - Deep-linking and refreshing routes (`/dashboard`, `/admin/leaves`) are handled by `frontend/vercel.json`.
 
 ---

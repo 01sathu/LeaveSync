@@ -1,6 +1,9 @@
-# README.md
+# Leave Management System (LeaveSync)
 
-# Leave Management System
+> 🚀 **Live Demo (User-End Frontend):** [https://leave-sync-frontend.vercel.app](https://leave-sync-frontend.vercel.app)  
+> ⚙️ **Live Server API (Backend):** [https://leavesync-backend.vercel.app](https://leavesync-backend.vercel.app)  
+> 🩺 **API Health Check:** [https://leavesync-backend.vercel.app/api/health](https://leavesync-backend.vercel.app/api/health)  
+> 📦 **GitHub Repository:** [https://github.com/01sathu/LeaveSync.git](https://github.com/01sathu/LeaveSync.git)
 
 A full-stack web application for employees to apply for leave and track their balance, and for an admin to review, approve, or reject leave requests. Built as a focused, single-purpose system (not a full HR platform) using the MERN-style stack with JWT authentication.
 

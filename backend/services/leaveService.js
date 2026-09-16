@@ -5,14 +5,21 @@ const AppError = require('../utils/AppError');
 
 /**
  * Calculates calendar days inclusive of both start and end dates.
- * Dates are normalized to UTC midnight to avoid DST / timezone offsets.
+ * Extracts year, month, and day integers directly to avoid any local timezone shift.
  */
 const calculateDays = (startDate, endDate) => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const startStr = typeof startDate === 'string' ? startDate : new Date(startDate).toISOString();
+  const endStr = typeof endDate === 'string' ? endDate : new Date(endDate).toISOString();
 
-  const startUtc = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
-  const endUtc = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+  const startParts = startStr.split('T')[0].split('-').map(Number);
+  const endParts = endStr.split('T')[0].split('-').map(Number);
+
+  const startUtc = Date.UTC(startParts[0], startParts[1] - 1, startParts[2]);
+  const endUtc = Date.UTC(endParts[0], endParts[1] - 1, endParts[2]);
+
+  if (endUtc < startUtc) {
+    throw new AppError('End date cannot be before start date', 400, 'INVALID_DATE_RANGE');
+  }
 
   const diffMs = endUtc - startUtc;
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
@@ -98,9 +105,12 @@ const approveLeaveRequest = async (requestId, adminId) => {
 
   // Defensive re-check: verify balance is still sufficient
   const typeKey = leaveRequest.leaveType.toLowerCase();
-  const currentCategory = employee.leaveBalance[typeKey];
-  const remaining = currentCategory.total - currentCategory.used;
+  const currentCategory = employee.leaveBalance && employee.leaveBalance[typeKey];
+  if (!currentCategory) {
+    throw new AppError(`Employee does not have a valid ${leaveRequest.leaveType} leave balance`, 400, 'INVALID_LEAVE_TYPE');
+  }
 
+  const remaining = currentCategory.total - currentCategory.used;
   if (leaveRequest.totalDays > remaining) {
     throw new AppError(
       `Cannot approve request: Employee balance has changed. Available: ${remaining} day(s), Requested: ${leaveRequest.totalDays} day(s)`,

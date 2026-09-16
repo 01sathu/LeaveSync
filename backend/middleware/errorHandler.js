@@ -1,45 +1,60 @@
 const AppError = require('../utils/AppError');
 
 const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
-  error.message = err.message;
-  error.statusCode = err.statusCode || 500;
-  error.errorCode = err.errorCode || 'SERVER_ERROR';
+  let statusCode = err.statusCode || 500;
+  let errorCode = err.errorCode || 'SERVER_ERROR';
+  let message = err.message || 'An unexpected error occurred';
 
-  // Log server errors for developer debugging (not sent to client)
-  if (error.statusCode === 500) {
-    console.error('Unhandled Error:', err);
+  // Handle malformed JSON request bodies from express.json()
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    statusCode = 400;
+    errorCode = 'INVALID_JSON';
+    message = 'Malformed JSON payload in request body';
   }
 
   // Mongoose Bad ObjectId (CastError)
-  if (err.name === 'CastError') {
-    error = new AppError('Invalid resource identifier format', 400, 'INVALID_OBJECT_ID');
+  else if (err.name === 'CastError') {
+    statusCode = 400;
+    errorCode = 'INVALID_OBJECT_ID';
+    message = 'Invalid resource identifier format';
   }
 
   // Mongoose Duplicate Key Error (e.g. unique email)
-  if (err.code === 11000) {
+  else if (err.code === 11000) {
     const field = Object.keys(err.keyValue || {})[0] || 'field';
-    error = new AppError(`A record with this ${field} already exists.`, 400, 'DUPLICATE_FIELD');
+    statusCode = 400;
+    errorCode = 'DUPLICATE_FIELD';
+    message = `A record with this ${field} already exists.`;
   }
 
   // Mongoose Validation Error
-  if (err.name === 'ValidationError') {
-    const messages = Object.values(err.errors).map((val) => val.message);
-    error = new AppError(messages.join(', '), 400, 'VALIDATION_ERROR');
+  else if (err.name === 'ValidationError') {
+    const messages = Object.values(err.errors || {}).map((val) => val.message);
+    statusCode = 400;
+    errorCode = 'VALIDATION_ERROR';
+    message = messages.join(', ');
   }
 
   // JWT Errors
-  if (err.name === 'JsonWebTokenError') {
-    error = new AppError('Invalid token. Please log in again.', 401, 'INVALID_TOKEN');
-  }
-  if (err.name === 'TokenExpiredError') {
-    error = new AppError('Token has expired. Please log in again.', 401, 'TOKEN_EXPIRED');
+  else if (err.name === 'JsonWebTokenError') {
+    statusCode = 401;
+    errorCode = 'INVALID_TOKEN';
+    message = 'Invalid authentication token. Please log in again.';
+  } else if (err.name === 'TokenExpiredError') {
+    statusCode = 401;
+    errorCode = 'TOKEN_EXPIRED';
+    message = 'Authentication token has expired. Please log in again.';
   }
 
-  res.status(error.statusCode).json({
+  // Log 500 errors server-side for developer debugging
+  if (statusCode === 500) {
+    console.error('Server Internal Error:', err);
+  }
+
+  res.status(statusCode).json({
     success: false,
-    message: error.message || 'An unexpected error occurred',
-    error: error.errorCode || 'INTERNAL_ERROR',
+    message,
+    error: errorCode,
   });
 };
 

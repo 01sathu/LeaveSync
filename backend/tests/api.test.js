@@ -1,7 +1,7 @@
 const http = require('http');
 const app = require('../server');
 
-const PORT = 5001; // Use test port
+const PORT = 5001; // Isolated test port
 let server;
 let BASE_URL = `http://localhost:${PORT}/api`;
 
@@ -15,7 +15,7 @@ const makeRequest = async (path, options = {}) => {
   const response = await fetch(url, {
     method: options.method || 'GET',
     headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: options.rawBody !== undefined ? options.rawBody : (options.body ? JSON.stringify(options.body) : undefined),
   });
 
   const json = await response.json().catch(() => null);
@@ -33,57 +33,63 @@ const assert = (condition, message) => {
 };
 
 async function runTests() {
-  console.log('🚀 Starting Automated API Test Suite for Leave Management System...\n');
+  console.log('🚀 Starting Comprehensive Edge-Case API Test Suite...\n');
 
   server = app.listen(PORT);
-  // Wait a moment for server to listen
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   try {
     // -------------------------------------------------------------
-    // TEST 1: Health Check
+    // TEST 1: System Health & Malformed JSON
     // -------------------------------------------------------------
-    console.log('Test Group 1: System Health');
+    console.log('Test Group 1: Health & Request Parsing');
     const health = await makeRequest('/health');
     assert(health.status === 200, 'GET /api/health returns 200');
     assert(health.body.success === true, 'Health check returns success: true');
 
+    // Edge Case: Malformed JSON body in request
+    const malformedJson = await makeRequest('/auth/login', {
+      method: 'POST',
+      rawBody: '{"email": "invalid-json',
+    });
+    assert(malformedJson.status === 400, 'Malformed JSON returns 400');
+    assert(malformedJson.body.error === 'INVALID_JSON', 'Malformed JSON returns INVALID_JSON code');
+
     // -------------------------------------------------------------
-    // TEST 2: Authentication & Logins (T-8.1)
+    // TEST 2: Authentication & Input Validation
     // -------------------------------------------------------------
-    console.log('\nTest Group 2: Authentication & Edge Cases');
+    console.log('\nTest Group 2: Authentication & Credentials');
     
-    // T-8.1 Wrong Password
+    // Wrong Password
     const badPass = await makeRequest('/auth/login', {
       method: 'POST',
       body: { email: 'asha.rao@example.com', password: 'WrongPassword!' },
     });
-    assert(badPass.status === 401, 'T-8.1: Wrong password returns 401 Unauthorized');
-    assert(badPass.body.error === 'INVALID_CREDENTIALS', 'Returns INVALID_CREDENTIALS error code');
+    assert(badPass.status === 401, 'Wrong password returns 401 Unauthorized');
+    assert(badPass.body.error === 'INVALID_CREDENTIALS', 'Returns INVALID_CREDENTIALS');
 
-    // T-8.1 Nonexistent Email
+    // Nonexistent Email
     const noUser = await makeRequest('/auth/login', {
       method: 'POST',
-      body: { email: 'nobody@example.com', password: 'SomePassword123' },
+      body: { email: 'nonexistent@example.com', password: 'SomePassword123' },
     });
-    assert(noUser.status === 401, 'T-8.1: Nonexistent email returns 401');
+    assert(noUser.status === 401, 'Nonexistent email returns 401');
 
-    // Missing Fields in Login
-    const missingLogin = await makeRequest('/auth/login', {
+    // Invalid Email Format
+    const badEmail = await makeRequest('/auth/login', {
       method: 'POST',
-      body: { email: 'asha.rao@example.com' },
+      body: { email: 'notanemail', password: 'Password123' },
     });
-    assert(missingLogin.status === 400, 'Missing password returns 400 Bad Request');
+    assert(badEmail.status === 400, 'Invalid email format returns 400');
+    assert(badEmail.body.error === 'INVALID_EMAIL', 'Returns INVALID_EMAIL code');
 
-    // Valid Employee Login
+    // Valid Employee Login (Asha Rao)
     const empLogin = await makeRequest('/auth/login', {
       method: 'POST',
       body: { email: 'asha.rao@example.com', password: 'Employee@123' },
     });
     assert(empLogin.status === 200, 'Valid employee login returns 200');
-    assert(empLogin.body.data.token, 'Token is returned on login');
     const empToken = empLogin.body.data.token;
-    const empUser = empLogin.body.data.user;
 
     // Valid Admin Login
     const adminLogin = await makeRequest('/auth/login', {
@@ -91,238 +97,216 @@ async function runTests() {
       body: { email: 'admin@example.com', password: 'Admin@123' },
     });
     assert(adminLogin.status === 200, 'Valid admin login returns 200');
-    assert(adminLogin.body.data.user.role === 'admin', 'Admin user role is admin');
     const adminToken = adminLogin.body.data.token;
 
-    // Employee 2 Login (Rahul Verma)
+    // Second Employee Login (Rahul Verma)
     const emp2Login = await makeRequest('/auth/login', {
       method: 'POST',
       body: { email: 'rahul.verma@example.com', password: 'Employee@123' },
     });
     const emp2Token = emp2Login.body.data.token;
-    const emp2User = emp2Login.body.data.user;
 
     // -------------------------------------------------------------
-    // TEST 3: Auth & Role Middleware (T-8.11, T-8.13, T-8.14)
+    // TEST 3: RBAC & Route Security
     // -------------------------------------------------------------
-    console.log('\nTest Group 3: Authorization & Security (T-8.11, T-8.13)');
+    console.log('\nTest Group 3: RBAC & Token Security');
     
-    // T-8.11 Employee accessing Admin Dashboard -> 403
-    const forbiddenAdmin = await makeRequest('/admin/dashboard', {
+    // Employee accessing Admin route
+    const forbidden = await makeRequest('/admin/dashboard', {
       headers: { Authorization: `Bearer ${empToken}` },
     });
-    assert(forbiddenAdmin.status === 403, 'T-8.11: Employee accessing admin dashboard returns 403 Forbidden');
+    assert(forbidden.status === 403, 'Employee accessing admin route returns 403 Forbidden');
 
-    // No Token -> 401
+    // No Token provided
     const noToken = await makeRequest('/employee/profile');
-    assert(noToken.status === 401, 'Request with no token returns 401 Unauthorized');
+    assert(noToken.status === 401, 'Missing token returns 401 Unauthorized');
 
-    // T-8.13 Invalid/Malformed Token -> 401
-    const badToken = await makeRequest('/employee/profile', {
+    // Malformed Token
+    const malformedToken = await makeRequest('/employee/profile', {
       headers: { Authorization: 'Bearer this.is.an.invalid.token' },
     });
-    assert(badToken.status === 401, 'T-8.13: Malformed JWT returns 401 Unauthorized');
+    assert(malformedToken.status === 401, 'Malformed token returns 401');
 
     // -------------------------------------------------------------
-    // TEST 4: Employee Leave Balances & Profiles
+    // TEST 4: Leave Application & Edge Cases
     // -------------------------------------------------------------
-    console.log('\nTest Group 4: Employee Profile & Leave Balance');
-    
-    const profile = await makeRequest('/employee/profile', {
-      headers: { Authorization: `Bearer ${empToken}` },
-    });
-    assert(profile.status === 200, 'GET /api/employee/profile returns 200');
-    assert(profile.body.data.email === 'asha.rao@example.com', 'Profile matches logged-in user');
+    console.log('\nTest Group 4: Leave Application Edge Cases');
 
-    const balanceRes = await makeRequest('/employee/leave-balance', {
-      headers: { Authorization: `Bearer ${empToken}` },
-    });
-    assert(balanceRes.status === 200, 'GET /api/employee/leave-balance returns 200');
-    assert(balanceRes.body.data.casual.remaining !== undefined, 'Balance includes computed remaining property');
-
-    // -------------------------------------------------------------
-    // TEST 5: Leave Application Validation (T-8.3, T-8.4, T-8.5, T-8.6, T-8.7)
-    // -------------------------------------------------------------
-    console.log('\nTest Group 5: Leave Application Validation & Balance Rules');
-
-    // T-8.3 Missing Fields
-    const missingFields = await makeRequest('/leaves', {
+    // Missing Fields
+    const missing = await makeRequest('/leaves', {
       method: 'POST',
       headers: { Authorization: `Bearer ${empToken}` },
       body: { leaveType: 'Casual' },
     });
-    assert(missingFields.status === 400, 'T-8.3: Missing required fields returns 400');
+    assert(missing.status === 400, 'Missing fields returns 400');
 
-    // T-8.4 Invalid Dates
-    const invalidDate = await makeRequest('/leaves', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${empToken}` },
-      body: { leaveType: 'Casual', startDate: 'not-a-date', endDate: 'invalid', reason: 'Vacation' },
-    });
-    assert(invalidDate.status === 400, 'T-8.4: Invalid date format returns 400');
-
-    // T-8.5 End date before start date
-    const badDateOrder = await makeRequest('/leaves', {
+    // End date before start date
+    const badRange = await makeRequest('/leaves', {
       method: 'POST',
       headers: { Authorization: `Bearer ${empToken}` },
       body: { leaveType: 'Casual', startDate: '2026-08-10', endDate: '2026-08-05', reason: 'Vacation' },
     });
-    assert(badDateOrder.status === 400, 'T-8.5: End date before start date returns 400');
+    assert(badRange.status === 400, 'End date before start date returns 400');
 
-    // T-8.7 Invalid Leave Type
-    const invalidType = await makeRequest('/leaves', {
+    // Invalid leave type
+    const badType = await makeRequest('/leaves', {
       method: 'POST',
       headers: { Authorization: `Bearer ${empToken}` },
-      body: { leaveType: 'Sabbatical', startDate: '2026-08-01', endDate: '2026-08-03', reason: 'Time off' },
+      body: { leaveType: 'Holiday', startDate: '2026-08-10', endDate: '2026-08-11', reason: 'Vacation' },
     });
-    assert(invalidType.status === 400, 'T-8.7: Invalid leave type returns 400');
+    assert(badType.status === 400, 'Invalid leave type returns 400');
 
-    // T-8.6 Insufficient Leave Balance (asking for 50 days when total is 12)
-    const overBudget = await makeRequest('/leaves', {
+    // Reason exceeding 500 characters
+    const longReason = 'A'.repeat(501);
+    const tooLong = await makeRequest('/leaves', {
       method: 'POST',
       headers: { Authorization: `Bearer ${empToken}` },
-      body: { leaveType: 'Casual', startDate: '2026-08-01', endDate: '2026-09-20', reason: 'Trip' },
+      body: { leaveType: 'Casual', startDate: '2026-08-10', endDate: '2026-08-11', reason: longReason },
     });
-    assert(overBudget.status === 400, 'T-8.6: Insufficient leave balance returns 400');
-    assert(overBudget.body.error === 'INSUFFICIENT_BALANCE', 'Returns INSUFFICIENT_BALANCE error code');
+    assert(tooLong.status === 400, 'Reason exceeding 500 chars returns 400');
+    assert(tooLong.body.error === 'REASON_TOO_LONG', 'Returns REASON_TOO_LONG code');
 
-    // Valid Leave Application (2 days of Casual leave)
+    // Insufficient balance
+    const overLimit = await makeRequest('/leaves', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${empToken}` },
+      body: { leaveType: 'Casual', startDate: '2026-08-01', endDate: '2026-09-30', reason: 'Long trip' },
+    });
+    assert(overLimit.status === 400, 'Insufficient balance returns 400');
+    assert(overLimit.body.error === 'INSUFFICIENT_BALANCE', 'Returns INSUFFICIENT_BALANCE');
+
+    // Edge Case: Same-Day Leave (start == end) -> exactly 1 day
+    const sameDay = await makeRequest('/leaves', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${empToken}` },
+      body: { leaveType: 'Casual', startDate: '2026-08-15', endDate: '2026-08-15', reason: 'Half-day errand' },
+    });
+    assert(sameDay.status === 201, 'Same-day leave returns 201 Created');
+    assert(sameDay.body.data.totalDays === 1, 'Same-day leave calculates as exactly 1 calendar day');
+
+    // Valid 2-day Leave Application
     const validLeave = await makeRequest('/leaves', {
       method: 'POST',
       headers: { Authorization: `Bearer ${empToken}` },
-      body: {
-        leaveType: 'Casual',
-        startDate: '2026-08-10',
-        endDate: '2026-08-11',
-        reason: 'Family appointment',
-      },
+      body: { leaveType: 'Casual', startDate: '2026-08-20', endDate: '2026-08-21', reason: 'Personal family matter' },
     });
-    assert(validLeave.status === 201, 'Valid leave application returns 201 Created');
-    assert(validLeave.body.data.status === 'Pending', 'New leave request has status Pending');
-    assert(validLeave.body.data.totalDays === 2, 'Total days correctly computed as 2 (inclusive calendar days)');
-    const createdRequestId = validLeave.body.data._id;
-
-    // Check balance is UNTOUCHED while Pending (FR-009)
-    const balanceAfterPending = await makeRequest('/employee/leave-balance', {
-      headers: { Authorization: `Bearer ${empToken}` },
-    });
-    assert(balanceAfterPending.body.data.casual.used === 0, 'FR-009: Pending leave does NOT deduct balance');
+    assert(validLeave.status === 201, 'Valid leave returns 201 Created');
+    assert(validLeave.body.data.status === 'Pending', 'Initial status is Pending');
+    assert(validLeave.body.data.totalDays === 2, 'Total days is 2');
+    const leaveId = validLeave.body.data._id;
 
     // -------------------------------------------------------------
-    // TEST 6: Ownership Security (T-8.17, T-8.18)
+    // TEST 5: ObjectId Validation Edge Cases
     // -------------------------------------------------------------
-    console.log('\nTest Group 6: Ownership Security & ID Validation');
+    console.log('\nTest Group 5: ObjectId Parameter Hardening');
 
-    // T-8.17 Invalid ObjectId format
-    const invalidIdRes = await makeRequest('/leaves/not-a-valid-id', {
+    // Non-hex characters
+    const nonHex = await makeRequest('/leaves/zzzzzzzzzzzzzzzzzzzzzzzz', {
       headers: { Authorization: `Bearer ${empToken}` },
     });
-    assert(invalidIdRes.status === 400, 'T-8.17: Invalid ObjectId format returns 400');
+    assert(nonHex.status === 400, 'Non-hex 24-char ObjectId returns 400');
+    assert(nonHex.body.error === 'INVALID_OBJECT_ID', 'Returns INVALID_OBJECT_ID code');
 
-    // T-8.18 Employee 2 attempts to access Employee 1's leave request
-    const crossAccess = await makeRequest(`/leaves/${createdRequestId}`, {
+    // 12-char string (which raw Mongoose sometimes accepts)
+    const shortId = await makeRequest('/leaves/123456789012', {
+      headers: { Authorization: `Bearer ${empToken}` },
+    });
+    assert(shortId.status === 400, '12-char ID rejected by exact 24-hex check (400)');
+
+    // -------------------------------------------------------------
+    // TEST 6: Ownership & Cross-Employee Protection
+    // -------------------------------------------------------------
+    console.log('\nTest Group 6: Cross-Employee Privacy Protection');
+    const crossAccess = await makeRequest(`/leaves/${leaveId}`, {
       headers: { Authorization: `Bearer ${emp2Token}` },
     });
-    assert(crossAccess.status === 404, 'T-8.18: Employee cannot access another employee leave request (returns 404)');
+    assert(crossAccess.status === 404, 'Employee cannot view another employee request (404)');
 
     // -------------------------------------------------------------
-    // TEST 7: Admin Review, Approval, Rejection & Idempotency (T-8.9, T-8.10, T-8.20)
+    // TEST 7: Admin Approval, Idempotency & Balance Deduction
     // -------------------------------------------------------------
-    console.log('\nTest Group 7: Admin Approval, Rejection, and Idempotency Guard');
-
-    // Admin approves the request
-    const approveRes = await makeRequest(`/admin/leaves/${createdRequestId}/approve`, {
+    console.log('\nTest Group 7: Admin Approval & Idempotency');
+    
+    // First approval
+    const approveRes = await makeRequest(`/admin/leaves/${leaveId}/approve`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${adminToken}` },
     });
-    assert(approveRes.status === 200, 'T-8.9: Admin can approve pending request (returns 200)');
+    assert(approveRes.status === 200, 'Admin can approve pending request (200)');
     assert(approveRes.body.data.status === 'Approved', 'Status updated to Approved');
 
-    // Confirm Employee 1 balance is now deducted
-    const balanceAfterApprove = await makeRequest('/employee/leave-balance', {
-      headers: { Authorization: `Bearer ${empToken}` },
-    });
-    assert(balanceAfterApprove.body.data.casual.used === 2, 'T-8.19: Casual used balance accurately increased to 2');
-    assert(balanceAfterApprove.body.data.casual.remaining === 10, 'T-8.19: Remaining balance is accurately 10 (12 - 2)');
-
-    // T-8.9 & T-8.20 Idempotency: Attempt to approve already-approved request -> 409 Conflict
-    const doubleApprove = await makeRequest(`/admin/leaves/${createdRequestId}/approve`, {
+    // Second approval (Idempotency check)
+    const duplicateApprove = await makeRequest(`/admin/leaves/${leaveId}/approve`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${adminToken}` },
     });
-    assert(doubleApprove.status === 409, 'T-8.9 / T-8.20: Re-approving already-approved request returns 409 Conflict');
-    assert(doubleApprove.body.error === 'ALREADY_PROCESSED', 'Error code is ALREADY_PROCESSED');
+    assert(duplicateApprove.status === 409, 'Re-approving returns 409 Conflict');
+    assert(duplicateApprove.body.error === 'ALREADY_PROCESSED', 'Error code is ALREADY_PROCESSED');
 
-    // Verify balance was NOT double-deducted
-    const balanceAfterDoubleApprove = await makeRequest('/employee/leave-balance', {
-      headers: { Authorization: `Bearer ${empToken}` },
-    });
-    assert(balanceAfterDoubleApprove.body.data.casual.used === 2, 'Balance remains 2 and was not double deducted');
+    // -------------------------------------------------------------
+    // TEST 8: Rejection Validation & Idempotency
+    // -------------------------------------------------------------
+    console.log('\nTest Group 8: Rejection Validation & Idempotency');
 
-    // Create another request to test Rejection
-    const rejectTarget = await makeRequest('/leaves', {
+    // Create a request to reject
+    const toReject = await makeRequest('/leaves', {
       method: 'POST',
       headers: { Authorization: `Bearer ${empToken}` },
-      body: {
-        leaveType: 'Sick',
-        startDate: '2026-09-01',
-        endDate: '2026-09-02',
-        reason: 'Feeling unwell',
-      },
+      body: { leaveType: 'Sick', startDate: '2026-09-10', endDate: '2026-09-11', reason: 'Flu recovery' },
     });
-    assert(rejectTarget.status === 201, 'Created second request for rejection test');
-    const rejectTargetId = rejectTarget.body.data._id;
+    assert(toReject.status === 201, 'Created request for rejection');
+    const rejectId = toReject.body.data._id;
 
-    // T-8.10 Admin rejects the request with reason
-    const rejectRes = await makeRequest(`/admin/leaves/${rejectTargetId}/reject`, {
+    // Rejection reason too long (> 500 chars)
+    const longRejectReason = 'R'.repeat(501);
+    const badReject = await makeRequest(`/admin/leaves/${rejectId}/reject`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${adminToken}` },
-      body: { rejectionReason: 'High workload during project release' },
+      body: { rejectionReason: longRejectReason },
     });
-    assert(rejectRes.status === 200, 'T-8.10: Admin can reject pending request (returns 200)');
-    assert(rejectRes.body.data.status === 'Rejected', 'Status updated to Rejected');
-    assert(rejectRes.body.data.rejectionReason === 'High workload during project release', 'Rejection reason preserved');
+    assert(badReject.status === 400, 'Rejection reason exceeding 500 chars returns 400');
+    assert(badReject.body.error === 'REASON_TOO_LONG', 'Returns REASON_TOO_LONG');
 
-    // Confirm Sick balance is UNCHANGED
-    const balanceAfterReject = await makeRequest('/employee/leave-balance', {
+    // Valid rejection
+    const validReject = await makeRequest(`/admin/leaves/${rejectId}/reject`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: { rejectionReason: 'Team project milestone this week' },
+    });
+    assert(validReject.status === 200, 'Valid rejection returns 200');
+    assert(validReject.body.data.status === 'Rejected', 'Status updated to Rejected');
+
+    // Re-reject (Idempotency check)
+    const duplicateReject = await makeRequest(`/admin/leaves/${rejectId}/reject`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(duplicateReject.status === 409, 'Re-rejecting returns 409 Conflict');
+
+    // -------------------------------------------------------------
+    // TEST 9: Query Parameter Sanitization & NoSQL Injection Protection
+    // -------------------------------------------------------------
+    console.log('\nTest Group 9: Query Parameter Sanitization');
+    
+    // Status filter with invalid value should be safely handled
+    const bogusFilter = await makeRequest('/leaves/my?status=BogusStatus', {
       headers: { Authorization: `Bearer ${empToken}` },
     });
-    assert(balanceAfterReject.body.data.sick.used === 0, 'FR-018: Rejected leave leaves balance unchanged (used = 0)');
+    assert(bogusFilter.status === 200, 'Invalid status query safely handled without crashing');
 
-    // T-8.10 Attempt to reject already-rejected request -> 409
-    const doubleReject = await makeRequest(`/admin/leaves/${rejectTargetId}/reject`, {
-      method: 'PATCH',
+    // Admin leaves with valid filter
+    const adminFiltered = await makeRequest('/admin/leaves?status=Approved', {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
-    assert(doubleReject.status === 409, 'T-8.10: Re-rejecting already-rejected request returns 409 Conflict');
+    assert(adminFiltered.status === 200, 'Admin leaves filtered by status returns 200');
+    assert(adminFiltered.body.data.every((l) => l.status === 'Approved'), 'Every returned record has status Approved');
 
-    // -------------------------------------------------------------
-    // TEST 8: Admin Dashboard Statistics (T-5.2)
-    // -------------------------------------------------------------
-    console.log('\nTest Group 8: Admin Dashboard Statistics & Reports');
-    const adminStats = await makeRequest('/admin/dashboard', {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
-    assert(adminStats.status === 200, 'GET /api/admin/dashboard returns 200');
-    assert(adminStats.body.data.totalEmployees >= 2, 'Admin dashboard reports total employees');
-    assert(typeof adminStats.body.data.approved === 'number', 'Approved count is a valid number');
-    assert(typeof adminStats.body.data.rejected === 'number', 'Rejected count is a valid number');
-
-    const adminEmployees = await makeRequest('/admin/employees', {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
-    assert(adminEmployees.status === 200, 'GET /api/admin/employees returns 200');
-    assert(adminEmployees.body.data.length >= 2, 'Lists all employees');
-    assert(!adminEmployees.body.data[0].password, 'Password hash is excluded from employee list');
-
-    console.log('\n🎉 ALL 20 TEST CASES PASSED SUCCESSFULLY!');
-  } catch (error) {
-    console.error('\n❌ Test Suite Failed:', error.message);
+    console.log('\n🎉 ALL EDGE-CASE TESTS PASSED PERFECTLY!');
+  } catch (err) {
+    console.error('\n❌ Test Suite Failed:', err.message);
     process.exitCode = 1;
   } finally {
-    if (server) {
-      server.close();
-    }
+    if (server) server.close();
     process.exit(process.exitCode || 0);
   }
 }

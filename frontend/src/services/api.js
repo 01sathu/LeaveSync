@@ -25,7 +25,16 @@ export const request = async (endpoint, options = {}) => {
     config.body = JSON.stringify(options.body);
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  } catch (networkError) {
+    const error = new Error('Unable to connect to the server. Please check your network or ensure the backend server is running.');
+    error.status = 0;
+    error.errorCode = 'NETWORK_ERROR';
+    throw error;
+  }
+
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {

@@ -6,7 +6,7 @@ const asyncHandler = require('../utils/asyncHandler');
 // @desc    Apply for a new leave request
 // @route   POST /api/leaves
 // @access  Private (Employee)
-const applyLeave = asyncHandler(async (req, res, next) => {
+const applyLeave = asyncHandler(async (req, res) => {
   const { leaveType, startDate, endDate, reason } = req.body;
 
   const newRequest = await leaveService.createLeaveRequest(req.user.id, {
@@ -26,11 +26,15 @@ const applyLeave = asyncHandler(async (req, res, next) => {
 // @desc    Get logged in employee's leave requests
 // @route   GET /api/leaves/my
 // @access  Private (Employee)
-const getMyLeaves = asyncHandler(async (req, res, next) => {
+const getMyLeaves = asyncHandler(async (req, res) => {
   const query = { employeeId: req.user.id };
 
-  if (req.query.status) {
-    query.status = req.query.status;
+  // Sanitize status query parameter against NoSQL injection
+  if (req.query.status && typeof req.query.status === 'string') {
+    const validStatuses = ['Pending', 'Approved', 'Rejected'];
+    if (validStatuses.includes(req.query.status)) {
+      query.status = req.query.status;
+    }
   }
 
   const leaves = await LeaveRequest.find(query)
@@ -56,11 +60,12 @@ const getLeaveById = asyncHandler(async (req, res, next) => {
     return next(new AppError('Leave request not found', 404, 'NOT_FOUND'));
   }
 
-  // Ownership verification: employee can only view their own request; admin can view any
-  if (
-    leaveRequest.employeeId._id.toString() !== req.user.id &&
-    req.user.role !== 'admin'
-  ) {
+  // Safe ownership extraction defending against null/deleted employee reference
+  const ownerId = leaveRequest.employeeId?._id
+    ? leaveRequest.employeeId._id.toString()
+    : leaveRequest.employeeId?.toString();
+
+  if (ownerId !== req.user.id && req.user.role !== 'admin') {
     return next(new AppError('Leave request not found', 404, 'NOT_FOUND'));
   }
 

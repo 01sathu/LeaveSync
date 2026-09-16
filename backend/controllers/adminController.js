@@ -26,30 +26,36 @@ const getAllEmployees = asyncHandler(async (req, res) => {
     .select('name email leaveBalance createdAt')
     .sort({ name: 1 });
 
-  // Format response with remaining calculations
-  const formatted = employees.map((emp) => ({
-    id: emp._id,
-    name: emp.name,
-    email: emp.email,
-    createdAt: emp.createdAt,
-    leaveBalance: {
-      casual: {
-        total: emp.leaveBalance.casual.total,
-        used: emp.leaveBalance.casual.used,
-        remaining: emp.leaveBalance.casual.total - emp.leaveBalance.casual.used,
+  // Format response with defensive fallback values
+  const formatted = employees.map((emp) => {
+    const casual = emp.leaveBalance?.casual || { total: 12, used: 0 };
+    const sick = emp.leaveBalance?.sick || { total: 10, used: 0 };
+    const earned = emp.leaveBalance?.earned || { total: 15, used: 0 };
+
+    return {
+      id: emp._id,
+      name: emp.name,
+      email: emp.email,
+      createdAt: emp.createdAt,
+      leaveBalance: {
+        casual: {
+          total: casual.total,
+          used: casual.used,
+          remaining: casual.total - casual.used,
+        },
+        sick: {
+          total: sick.total,
+          used: sick.used,
+          remaining: sick.total - sick.used,
+        },
+        earned: {
+          total: earned.total,
+          used: earned.used,
+          remaining: earned.total - earned.used,
+        },
       },
-      sick: {
-        total: emp.leaveBalance.sick.total,
-        used: emp.leaveBalance.sick.used,
-        remaining: emp.leaveBalance.sick.total - emp.leaveBalance.sick.used,
-      },
-      earned: {
-        total: emp.leaveBalance.earned.total,
-        used: emp.leaveBalance.earned.used,
-        remaining: emp.leaveBalance.earned.total - emp.leaveBalance.earned.used,
-      },
-    },
-  }));
+    };
+  });
 
   res.status(200).json({
     success: true,
@@ -63,8 +69,13 @@ const getAllEmployees = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const getAllLeaves = asyncHandler(async (req, res) => {
   const query = {};
-  if (req.query.status) {
-    query.status = req.query.status;
+
+  // Sanitize status query parameter against NoSQL injection
+  if (req.query.status && typeof req.query.status === 'string') {
+    const validStatuses = ['Pending', 'Approved', 'Rejected'];
+    if (validStatuses.includes(req.query.status)) {
+      query.status = req.query.status;
+    }
   }
 
   const leaves = await LeaveRequest.find(query)

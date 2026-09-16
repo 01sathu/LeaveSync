@@ -21,16 +21,19 @@ const app = express();
 // Database connection
 connectDB();
 
-// CORS configuration
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+// CORS configuration supporting comma-separated lists and trailing slash stripping
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((url) => url.trim().replace(/\/$/, ''));
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, postman) or matching clientUrl
-      if (!origin || origin === clientUrl || process.env.NODE_ENV !== 'production') {
+      // Allow requests with no origin (curl, postman, server-to-server) or matching allowed list
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error('Not allowed by CORS policy'));
       }
     },
     credentials: true,
@@ -60,7 +63,7 @@ app.use('/api/employee', employeeRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Catch-all 404 handler
+// Catch-all 404 handler for undefined routes
 app.all('*', (req, res, next) => {
   next(new AppError(`Cannot find ${req.originalUrl} on this server`, 404, 'NOT_FOUND'));
 });
@@ -70,9 +73,8 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-let server;
 if (process.env.NODE_ENV !== 'test') {
-  server = app.listen(PORT, () => {
+  app.listen(PORT, () => {
     console.log(`Leave Management System Server running on port ${PORT}`);
   });
 }

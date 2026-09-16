@@ -4,7 +4,8 @@ const AppError = require('../utils/AppError');
 const validateObjectId = (paramName = 'id') => {
   return (req, res, next) => {
     const id = req.params[paramName];
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    // Exact 24-character hexadecimal check to reject arbitrary strings
+    if (!id || !/^[0-9a-fA-F]{24}$/.test(id) || !mongoose.Types.ObjectId.isValid(id)) {
       return next(
         new AppError(`Invalid ${paramName} format`, 400, 'INVALID_OBJECT_ID')
       );
@@ -21,7 +22,7 @@ const validateLogin = (req, res, next) => {
     );
   }
   const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
-  if (!emailRegex.test(email.trim())) {
+  if (typeof email !== 'string' || !emailRegex.test(email.trim())) {
     return next(new AppError('Please provide a valid email address', 400, 'INVALID_EMAIL'));
   }
   next();
@@ -51,6 +52,11 @@ const validateLeaveApplication = (req, res, next) => {
     );
   }
 
+  // Verify dates are valid strings
+  if (typeof startDate !== 'string' || typeof endDate !== 'string') {
+    return next(new AppError('Dates must be valid date strings', 400, 'INVALID_DATE'));
+  }
+
   const start = new Date(startDate);
   const end = new Date(endDate);
 
@@ -60,10 +66,17 @@ const validateLeaveApplication = (req, res, next) => {
     );
   }
 
-  const startMidnight = new Date(start.toISOString().split('T')[0]);
-  const endMidnight = new Date(end.toISOString().split('T')[0]);
+  const startParts = startDate.split('T')[0].split('-').map(Number);
+  const endParts = endDate.split('T')[0].split('-').map(Number);
 
-  if (endMidnight < startMidnight) {
+  if (startParts.length !== 3 || endParts.length !== 3) {
+    return next(new AppError('Dates must be formatted as YYYY-MM-DD', 400, 'INVALID_DATE'));
+  }
+
+  const startUtc = Date.UTC(startParts[0], startParts[1] - 1, startParts[2]);
+  const endUtc = Date.UTC(endParts[0], endParts[1] - 1, endParts[2]);
+
+  if (endUtc < startUtc) {
     return next(
       new AppError('End date cannot be before start date', 400, 'INVALID_DATE_RANGE')
     );
@@ -82,8 +95,19 @@ const validateLeaveApplication = (req, res, next) => {
   next();
 };
 
+const validateRejection = (req, res, next) => {
+  const { rejectionReason } = req.body;
+  if (rejectionReason && typeof rejectionReason === 'string' && rejectionReason.trim().length > 500) {
+    return next(
+      new AppError('Rejection reason cannot exceed 500 characters', 400, 'REASON_TOO_LONG')
+    );
+  }
+  next();
+};
+
 module.exports = {
   validateObjectId,
   validateLogin,
   validateLeaveApplication,
+  validateRejection,
 };

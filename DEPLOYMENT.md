@@ -1,4 +1,4 @@
-﻿# LeaveSync Deployment Guide — Vercel Full-Stack Hosting
+# LeaveSync Deployment Guide — Vercel Full-Stack Hosting
 
 This guide provides step-by-step instructions to host both the **Frontend** and **Backend API** directly on **Vercel** with **MongoDB Atlas** as the database.
 

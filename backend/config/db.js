@@ -8,14 +8,19 @@ const connectDB = async () => {
     return;
   }
 
-  if (!process.env.MONGO_URI) {
+  const uri =
+    process.env.NODE_ENV === 'test'
+      ? process.env.TEST_MONGO_URI || 'mongodb://127.0.0.1:27017/leave_management_db'
+      : process.env.MONGO_URI;
+
+  if (!uri) {
     console.error('CRITICAL CONFIG ERROR: "MONGO_URI" environment variable is not defined.');
     console.error('Please configure MONGO_URI in your Vercel dashboard or local .env file.');
     return;
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+    const conn = await mongoose.connect(uri);
     isConnected = true;
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {

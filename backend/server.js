@@ -18,20 +18,10 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
-// Database connection
-if (!process.env.VERCEL) {
+// Database connection (for standalone server mode)
+if (require.main === module) {
   connectDB();
 }
-
-// Serverless DB connection middleware (ensures connection is established before handling request)
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    next(new AppError('Database connection failure. Please verify MONGO_URI.', 500, 'DB_CONNECTION_ERROR'));
-  }
-});
 
 // CORS configuration supporting comma-separated lists, wildcards, and vercel preview domains
 const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
@@ -81,6 +71,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Serverless DB connection middleware (ensures connection is established before handling data requests)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(new AppError('Database connection failure. Please verify MONGO_URI in your environment settings.', 500, 'DB_CONNECTION_ERROR'));
+  }
+});
+
 // Mount application routes
 app.use('/api/auth', authRoutes);
 app.use('/api/employee', employeeRoutes);
@@ -97,7 +97,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Leave Management System Server running on port ${PORT}`);
   });

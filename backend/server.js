@@ -19,7 +19,19 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 
 // Database connection
-connectDB();
+if (!process.env.VERCEL) {
+  connectDB();
+}
+
+// Serverless DB connection middleware (ensures connection is established before handling request)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(new AppError('Database connection failure. Please verify MONGO_URI.', 500, 'DB_CONNECTION_ERROR'));
+  }
+});
 
 // CORS configuration supporting comma-separated lists, wildcards, and vercel preview domains
 const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
@@ -85,7 +97,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Leave Management System Server running on port ${PORT}`);
   });

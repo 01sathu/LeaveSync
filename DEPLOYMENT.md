@@ -1,29 +1,29 @@
-﻿# LeaveSync Deployment Guide
+﻿# LeaveSync Deployment Guide — Vercel Full-Stack Hosting
 
-This guide provides step-by-step instructions to deploy the **LeaveSync** full-stack system live to production using **MongoDB Atlas** (Database), **Render** (Backend API), and **Vercel** (Frontend SPA).
+This guide provides step-by-step instructions to host both the **Frontend** and **Backend API** directly on **Vercel** with **MongoDB Atlas** as the database.
 
 ---
 
 ## Architecture at a Glance
 
-* **Frontend:** React + Vite + Tailwind CSS &rarr; Hosted on **Vercel**
-* **Backend:** Node.js + Express REST API &rarr; Hosted on **Render** (or Railway)
-* **Database:** MongoDB Atlas M0 Free Cluster &rarr; Hosted on **MongoDB Cloud**
+* **Database:** MongoDB Atlas M0 Free Cluster &rarr; [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas)
+* **Backend API:** Node.js + Express Serverless &rarr; Hosted on **Vercel** (`backend/`)
+* **Frontend:** React + Vite + Tailwind CSS &rarr; Hosted on **Vercel** (`frontend/`)
 
 ---
 
 ## Step 1: Set Up MongoDB Atlas (Database)
 
 1. Sign up or log in to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
-2. Click **Create a Database** and choose the **M0 Free Cluster**.
+2. Click **Create a Database** and select the **M0 Free Cluster**.
 3. Create a **Database User**:
-   - Username: e.g., `leavesync_admin`
-   - Password: Choose a strong password and save it securely.
+   - Username: e.g. `leavesync_admin`
+   - Password: Choose a secure password (avoid special characters like `@`, `/`, `#` in the password or URL-encode them).
 4. Configure **Network Access**:
    - Go to **Network Access** &rarr; **Add IP Address**.
-   - Select **Allow Access from Anywhere** (`0.0.0.0/0`) so Render and local tools can connect securely with credentials.
+   - Choose **Allow Access from Anywhere** (`0.0.0.0/0`) so Vercel serverless functions can connect.
 5. Get your Connection String:
-   - Go to **Database** &rarr; click **Connect** &rarr; select **Drivers (Node.js)**.
+   - Go to **Database** &rarr; click **Connect** &rarr; choose **Drivers (Node.js)**.
    - Copy the URI:
      ```
      mongodb+srv://leavesync_admin:<password>@cluster0.xxxxx.mongodb.net/leave_management_db?retryWrites=true&w=majority
@@ -32,30 +32,26 @@ This guide provides step-by-step instructions to deploy the **LeaveSync** full-s
 
 ---
 
-## Step 2: Deploy Backend to Render
+## Step 2: Deploy Backend to Vercel
 
-1. Sign up or log in to [Render](https://render.com).
-2. Click **New +** &rarr; **Web Service**.
-3. Connect your GitHub repository: `https://github.com/01sathu/LeaveSync.git`.
-4. Configure the service:
-   - **Name:** `leavesync-api`
-   - **Root Directory:** `backend`
-   - **Runtime:** `Node`
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-   - **Instance Type:** `Free`
+1. Go to your [Vercel Dashboard](https://vercel.com/dashboard).
+2. Click **Add New...** &rarr; **Project**.
+3. Import your GitHub repository: `https://github.com/01sathu/LeaveSync`.
+4. Configure the project:
+   - **Project Name:** `leavesync-backend` (or your choice)
+   - **Framework Preset:** `Other`
+   - **Root Directory:** Click *Edit* and select **`backend`**.
 5. Under **Environment Variables**, add:
    | Key | Value | Notes |
    |---|---|---|
-   | `NODE_ENV` | `production` | Enables production optimizations |
-   | `PORT` | `5000` | Port listened to by Express |
    | `MONGO_URI` | `mongodb+srv://...` | Your Atlas connection string from Step 1 |
-   | `JWT_SECRET` | *(Random 32+ char string)* | Secret for signing JWTs |
-   | `CLIENT_URL` | `*` *(or your Vercel URL)* | CORS origin |
-6. Click **Deploy Web Service**.
-7. Once deployed, copy your public backend URL (e.g. `https://leavesync-api.onrender.com`).
-   - Test it by visiting: `https://leavesync-api.onrender.com/api/health`
-   - It should respond with:
+   | `JWT_SECRET` | *(Random 32+ character string)* | e.g. `leavesync_super_secret_jwt_key_2026` |
+   | `NODE_ENV` | `production` | Enables production optimizations |
+   | `CLIENT_URL` | `*` | Enables CORS across Vercel deployments |
+6. Click **Deploy**.
+7. Once deployed, note down your live Backend URL (e.g. `https://leavesync-backend.vercel.app`).
+   - Test it by visiting: `https://leavesync-backend.vercel.app/api/health`
+   - It will return:
      ```json
      {"success":true,"message":"Leave Management System API is healthy", ...}
      ```
@@ -64,35 +60,35 @@ This guide provides step-by-step instructions to deploy the **LeaveSync** full-s
 
 ## Step 3: Deploy Frontend to Vercel
 
-1. Sign up or log in to [Vercel](https://vercel.com).
+1. Go back to your [Vercel Dashboard](https://vercel.com/dashboard).
 2. Click **Add New...** &rarr; **Project**.
-3. Import your GitHub repository: `https://github.com/01sathu/LeaveSync`.
-4. In the configuration screen:
+3. Import the same repository: `LeaveSync`.
+4. Configure the project:
+   - **Project Name:** `leavesync-frontend` (or `leavesync`)
    - **Framework Preset:** `Vite`
    - **Root Directory:** Click *Edit* and select **`frontend`**.
-   - **Build and Output Settings:** (Leave default: `npm run build`, output: `dist`).
 5. Under **Environment Variables**, add:
    | Key | Value |
    |---|---|
-   | `VITE_API_URL` | `https://leavesync-api.onrender.com/api` |
-   *(Note: Replace with your actual Render backend URL followed by `/api`)*
+   | `VITE_API_URL` | `https://leavesync-backend.vercel.app/api` |
+   *(Note: Use your actual Backend URL from Step 2 followed by `/api`)*
 6. Click **Deploy**.
-7. Vercel will build the frontend and provide a live URL (e.g. `https://leavesync.vercel.app`).
-   - The included [`frontend/vercel.json`](./frontend/vercel.json) handles client-side routing automatically so refreshing `/dashboard` or `/admin/leaves` will never result in 404 errors.
+7. Vercel will build and deploy the frontend (e.g. `https://leavesync-frontend.vercel.app`).
+   - Deep-linking and refreshing routes (`/dashboard`, `/admin/leaves`) are handled by `frontend/vercel.json`.
 
 ---
 
-## Step 4: Seed the Production Database (Optional)
+## Step 4: Seed the Database with Default Accounts
 
 To populate your cloud database with the default Admin and Employee accounts:
 
-From your local terminal, run the seed script pointing to your Atlas connection string:
-```bash
+In PowerShell:
+```powershell
 $env:MONGO_URI="mongodb+srv://leavesync_admin:<password>@cluster0.xxxxx.mongodb.net/leave_management_db?retryWrites=true&w=majority"
 node backend/scripts/seed.js
 ```
 
-Or run via Bash:
+Or in Bash / Linux:
 ```bash
 MONGO_URI="mongodb+srv://leavesync_admin:<password>@cluster0.xxxxx.mongodb.net/leave_management_db?retryWrites=true&w=majority" node backend/scripts/seed.js
 ```

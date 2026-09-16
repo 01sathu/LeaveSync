@@ -221,7 +221,7 @@ Already covered above. Use the same `MONGO_URI` for whichever environment (local
 
 ## Live Application
 
-* **User-End (Frontend):** [https://leavesync-frontend.vercel.app](https://leavesync-frontend.vercel.app)
+* **User-End (Frontend):** [https://leave-sync-frontend.vercel.app](https://leave-sync-frontend.vercel.app)
 * **Backend API:** [https://leavesync-backend.vercel.app](https://leavesync-backend.vercel.app)
 * **API Health Check:** [https://leavesync-backend.vercel.app/api/health](https://leavesync-backend.vercel.app/api/health)
 

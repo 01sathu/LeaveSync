@@ -66,6 +66,30 @@ const createLeaveRequest = async (userId, { leaveType, startDate, endDate, reaso
   const totalDays = calculateDays(startDate, endDate);
   validateBalance(user, leaveType, totalDays);
 
+  const reqStart = new Date(startDate);
+  reqStart.setUTCHours(0, 0, 0, 0);
+
+  const reqEnd = new Date(endDate);
+  reqEnd.setUTCHours(23, 59, 59, 999);
+
+  // Check for any overlapping Pending or Approved leave requests for this employee
+  const overlappingLeave = await LeaveRequest.findOne({
+    employeeId: user._id,
+    status: { $in: ['Pending', 'Approved'] },
+    startDate: { $lte: reqEnd },
+    endDate: { $gte: reqStart },
+  });
+
+  if (overlappingLeave) {
+    const formattedStart = overlappingLeave.startDate.toISOString().split('T')[0];
+    const formattedEnd = overlappingLeave.endDate.toISOString().split('T')[0];
+    throw new AppError(
+      `You already have an active (${overlappingLeave.status}) leave request covering ${formattedStart} to ${formattedEnd}. Overlapping leave requests are not permitted.`,
+      400,
+      'OVERLAPPING_LEAVE'
+    );
+  }
+
   const leaveRequest = await LeaveRequest.create({
     employeeId: user._id,
     leaveType,

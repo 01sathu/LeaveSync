@@ -38,7 +38,37 @@ async function runTests() {
   console.log('🚀 Starting Comprehensive Edge-Case API Test Suite...\n');
 
   server = app.listen(PORT);
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  const mongoose = require('mongoose');
+  if (mongoose.connection.readyState !== 1) {
+    await new Promise((resolve) => {
+      mongoose.connection.once('connected', resolve);
+      setTimeout(resolve, 3000);
+    });
+  }
+
+  const User = require('../models/User');
+  const LeaveRequest = require('../models/LeaveRequest');
+
+  const cleanupTestData = async () => {
+    try {
+      await LeaveRequest.deleteMany({
+        reason: { $in: ['Half-day errand', 'Personal family matter', 'Attempt overlapping dates', 'Flu recovery'] },
+      });
+      const testAsha = await User.findOne({ email: 'asha.rao@example.com' });
+      if (testAsha) {
+        testAsha.leaveBalance = {
+          casual: { total: 12, used: 0 },
+          sick: { total: 10, used: 0 },
+          earned: { total: 15, used: 0 },
+        };
+        await testAsha.save();
+      }
+    } catch (e) {
+      // Best-effort cleanup
+    }
+  };
+
+  await cleanupTestData();
 
   try {
     // -------------------------------------------------------------
@@ -197,6 +227,15 @@ async function runTests() {
     assert(validLeave.body.data.totalDays === 2, 'Total days is 2');
     const leaveId = validLeave.body.data._id;
 
+    // Edge Case: Overlapping Leave Application (same or overlapping dates) -> 400 OVERLAPPING_LEAVE
+    const overlappingAttempt = await makeRequest('/leaves', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${empToken}` },
+      body: { leaveType: 'Casual', startDate: '2026-08-20', endDate: '2026-08-22', reason: 'Attempt overlapping dates' },
+    });
+    assert(overlappingAttempt.status === 400, 'Overlapping leave returns 400');
+    assert(overlappingAttempt.body.error === 'OVERLAPPING_LEAVE', 'Returns OVERLAPPING_LEAVE code');
+
     // -------------------------------------------------------------
     // TEST 5: ObjectId Validation Edge Cases
     // -------------------------------------------------------------
@@ -308,6 +347,7 @@ async function runTests() {
     console.error('\n❌ Test Suite Failed:', err.message);
     process.exitCode = 1;
   } finally {
+    await cleanupTestData();
     if (server) server.close();
     process.exit(process.exitCode || 0);
   }

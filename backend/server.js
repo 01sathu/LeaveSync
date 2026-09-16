@@ -21,7 +21,7 @@ const app = express();
 // Database connection
 connectDB();
 
-// CORS configuration supporting comma-separated lists and trailing slash stripping
+// CORS configuration supporting comma-separated lists, wildcards, and vercel preview domains
 const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
   .map((url) => url.trim().replace(/\/$/, ''));
@@ -29,12 +29,24 @@ const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (curl, postman, server-to-server) or matching allowed list
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS policy'));
+      // Allow requests with no origin (e.g. mobile apps, curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+
+      // In development or if wildcard is configured, allow all
+      if (process.env.NODE_ENV !== 'production' || allowedOrigins.includes('*')) {
+        return callback(null, true);
       }
+
+      const cleanOrigin = origin.replace(/\/$/, '');
+      const isAllowed =
+        allowedOrigins.includes(cleanOrigin) ||
+        (cleanOrigin.endsWith('.vercel.app') && allowedOrigins.some((url) => url.includes('vercel.app')));
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+
+      callback(new AppError(`Origin ${origin} is not allowed by CORS policy`, 403, 'CORS_ERROR'));
     },
     credentials: true,
   })
